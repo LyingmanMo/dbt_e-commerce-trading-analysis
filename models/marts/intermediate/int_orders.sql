@@ -15,7 +15,7 @@ order_totals as (
         order_id,
         payment_status,
         sum(payment_amount) as order_value_dollars,
-        payment_finalized_date
+        max(created_id) as payment_finalized_date
     from payments
     group by 1, 2
 ),

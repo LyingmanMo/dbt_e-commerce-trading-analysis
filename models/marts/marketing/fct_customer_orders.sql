@@ -15,16 +15,29 @@ customer_orders as (
         customers.full_name,
         customers.surname,
         customers.givenname,
+
+        -- first purchase day
         min(orders.order_date) over (partition by orders.customer_id) as first_order_date,
+
         min(valid_order_date) over (partition by orders.customer_id) as first_non_returned_order_date,
+
         max(valid_order_date) over (partition by orders.customer_id) as most_recent_non_returned_order_date,
-        payment_finalized_date,
+
+        -- customer sales sequence
         row_number() over (partition by orders.customer_id order by orders.order_id) as customer_sales_seq,
-        sum() over (partition by orders.customer_id order by orders.order_id) as customer_lifetime_value,
+
+        -- customer accumulative lifetime value
+        sum(order_value_dollars) over (partition by orders.customer_id order by orders.order_id) as customer_lifetime_value,
+
         count(*) over (partition by orders.customer_id) as order_count,
+
         sum(nvl2(orders.valid_order_date, 1, 0)) over (partition by orders.customer_id) as non_returned_order_count,
+
+        -- customer total lifetime value
         sum(nvl2(orders.valid_order_date, orders.order_value_dollars, 0)) over(partition by orders.customer_id) as total_lifetime_value,
+
         array_agg(distinct orders.order_id) over (partition by orders.customer_id) as order_ids
+
     from orders 
     inner join customers on orders.customer_id = customers.customer_id
 ),
@@ -32,8 +45,12 @@ customer_orders as (
 add_avg_order_values as (
     select 
         *,
-        case when order_date = first_order_date then 'yes' else 'no' as is_first_order 
+
+        -- new vs returning customer
+        case when order_date = first_order_date then 'yes' else 'no' end as is_new_customer,
+
         total_lifetime_value / non_returned_order_count as avg_non_returned_order_value
+
     from customer_orders
 ),
 
@@ -49,7 +66,7 @@ final as (
         order_id,
         order_value_dollars,
         order_status,
-        is_first_order,
+        is_new_customer,
         order_date,
         payment_finalized_date,
         customer_sales_seq,
@@ -59,5 +76,3 @@ final as (
 
 -- simple select statement
 select * from final
-order by customer_id,order_id
-
