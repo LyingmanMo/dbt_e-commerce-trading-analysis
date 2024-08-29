@@ -11,7 +11,7 @@ transformed as (
         paymentmethod as payment_method, 
         status as payment_status, 
         round(amount/100.0,2) as payment_amount, 
-        created as created_id
+        created as payment_finalized_date
     from source
 )
 
