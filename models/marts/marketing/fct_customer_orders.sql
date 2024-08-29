@@ -7,87 +7,78 @@ customers as (
 
 orders as (
     select * from {{ ref('stg_jaffle_shop__orders') }}
+    where order_status not in ('pending')
 ),
 
 payments as (
     select * from {{ ref('stg_stripe__payments') }}
+    where payment_status != 'fail'
+),
+
+order_totals as (
+    select 
+        order_id,
+        payment_status,
+        sum(payment_amount) as order_value_dollars
+    from payments
+    group by 1, 2
+),
+
+order_values_joined as (
+    select 
+        orders.*,
+        order_totals.payment_status,
+        order_totals.order_value_dollars
+    from orders
+    left join order_totals
+        on orders.order_id = order_totals.order_id
 ),
 
 -- logical CTEs
-customers as (
-    select 
-        first_name || ' ' || last_name as name, 
-        * 
-    from raw.jaffle_shop.customers
-),
-
-a as (
-    select 
-        row_number() over (partition by user_id order by order_date, id) as user_order_seq,
-        *
-    from raw.jaffle_shop.orders
-),
-
-b as (
-    select 
-        first_name || ' ' || last_name as name, 
-        * 
-    from raw.jaffle_shop.customers
-),
-
 customer_order_history as (
     select 
-        b.id as customer_id,
-        b.name as full_name,
-        b.last_name as surname,
-        b.first_name as givenname,
+        customers.customer_id,
+        customers.full_name,
+        customers.surname,
+        customers.givenname,
         min(order_date) as first_order_date,
-        min(case when a.status not in ('returned','return_pending') then order_date end) as first_non_returned_order_date,
-        max(case when a.status not in ('returned','return_pending') then order_date end) as most_recent_non_returned_order_date,
+        min(valid_order_date) as first_non_returned_order_date,
+        max(valid_order_date) as most_recent_non_returned_order_date,
         coalesce(max(user_order_seq),0) as order_count,
-        coalesce(count(case when a.status != 'returned' then 1 end),0) as non_returned_order_count,
-        sum(case when a.status not in ('returned','return_pending') then round(c.amount/100.0,2) else 0 end) as total_lifetime_value,
-        sum(case when a.status not in ('returned','return_pending') then round(c.amount/100.0,2) else 0 end)/nullif(count(case when a.status not in ('returned','return_pending') then 1 end),0) as avg_non_returned_order_value,
-        array_agg(distinct a.id) as order_ids
+        coalesce(count(case when order_values_joined.order_status != 'returned' then 1 end),0) as non_returned_order_count,
+        sum(case when valid_order_date is not null then order_values_joined.order_value_dollars else 0 end) as total_lifetime_value,
+        sum(case when valid_order_date is not null then order_values_joined.order_value_dollars else 0 end)/nullif(count(case when valid_order_date is not null then 1 end),0) as avg_non_returned_order_value,
+        array_agg(distinct order_values_joined.order_id) as order_ids
 
-    from a
+    from order_values_joined
 
-    join b
-    on a.user_id = b.id
+    join customers
+    on order_values_joined.customer_id = customers.customer_id
 
-    left outer join raw.stripe.payment c
-    on a.id = c.orderid
-
-    where a.status not in ('pending') and c.status != 'fail'
-
-    group by b.id, b.name, b.last_name, b.first_name
+    group by customers.customer_id, customers.full_name, customers.surname, customers.givenname
 ),
 
 -- final CTE
 final as (
     select 
-        orders.id as order_id,
-        orders.user_id as customer_id,
-        last_name as surname,
-        first_name as givenname,
+        order_id,
+        customers.customer_id,
+        customers.surname,
+        customers.givenname,
         first_order_date,
         order_count,
         total_lifetime_value,
-        round(amount/100.0,2) as order_value_dollars,
-        orders.status as order_status,
-        payments.status as payment_status
-    from raw.jaffle_shop.orders as orders
+        order_value_dollars,
+        order_status,
+        payment_status
+    from order_values_joined
 
     join customers
-    on orders.user_id = customers.id
+    on order_values_joined.customer_id = customers.customer_id
 
     join customer_order_history
-    on orders.user_id = customer_order_history.customer_id
+    on order_values_joined.customer_id = customer_order_history.customer_id
 
-    left outer join raw.stripe.payment payments
-    on orders.id = payments.orderid
-
-    where payments.status != 'fail'
 )
 
 -- simple select statement
