@@ -9,51 +9,44 @@ orders as (
     select * from {{ ref('int_orders') }}
 ),
 
--- logical CTEs
-customer_order_history as (
+customer_orders as (
     select 
-        customers.customer_id,
+        orders.*, 
         customers.full_name,
         customers.surname,
         customers.givenname,
-        min(order_date) as first_order_date,
-        min(valid_order_date) as first_non_returned_order_date,
-        max(valid_order_date) as most_recent_non_returned_order_date,
-        coalesce(max(user_order_seq),0) as order_count,
-        coalesce(count(case when orders.order_status != 'returned' then 1 end),0) as non_returned_order_count,
-        sum(case when valid_order_date is not null then orders.order_value_dollars else 0 end) as total_lifetime_value,
-        sum(case when valid_order_date is not null then orders.order_value_dollars else 0 end)/nullif(count(case when valid_order_date is not null then 1 end),0) as avg_non_returned_order_value,
-        array_agg(distinct orders.order_id) as order_ids
+        min(orders.order_date) over (partition by orders.customer_id) as first_order_date,
+        min(valid_order_date) over (partition by orders.customer_id) as first_non_returned_order_date,
+        max(valid_order_date) over (partition by orders.customer_id) as most_recent_non_returned_order_date,
+        count(*) over (partition by orders.customer_id) as order_count,
+        sum(nvl2(orders.valid_order_date, 1, 0)) over (partition by orders.customer_id) as non_returned_order_count,
+        sum(nvl2(orders.valid_order_date, orders.order_value_dollars, 0)) over(partition by orders.customer_id) as total_lifetime_value,
+        array_agg(distinct orders.order_id) over (partition by orders.customer_id) as order_ids
+    from orders 
+    inner join customers on orders.customer_id = customers.customer_id
+),
 
-    from orders
-
-    join customers
-    on orders.customer_id = customers.customer_id
-
-    group by customers.customer_id, customers.full_name, customers.surname, customers.givenname
+add_avg_order_values as (
+    select 
+        *,
+        total_lifetime_value / non_returned_order_count as avg_non_returned_order_value
+    from customer_orders
 ),
 
 -- final CTE
 final as (
     select 
         order_id,
-        customers.customer_id,
-        customers.surname,
-        customers.givenname,
+        customer_id,
+        surname,
+        givenname,
         first_order_date,
         order_count,
         total_lifetime_value,
         order_value_dollars,
         order_status,
         payment_status
-    from orders
-
-    join customers
-    on orders.customer_id = customers.customer_id
-
-    join customer_order_history
-    on orders.customer_id = customer_order_history.customer_id
-
+    from add_avg_order_values
 )
 
 -- simple select statement
