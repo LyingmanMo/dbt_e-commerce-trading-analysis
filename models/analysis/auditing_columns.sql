@@ -1,5 +1,3 @@
-{# in dbt Develop #}
-
 {% set old_etl_relation = adapter.get_relation(
     database = "analytics",
     schema = "dbt_xliu",
