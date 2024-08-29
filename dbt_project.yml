@@ -39,4 +39,8 @@ models:
       +materialized: table
     staging: 
       +materialized: view
+    legacy:
+      +materialized: table
+    analysis:
+      +materialized: ephemeral
 
