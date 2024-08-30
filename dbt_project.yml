@@ -47,4 +47,7 @@ models:
     analysis:
       # materialize all auditing models and temporal tests as ephemeral
       +materialized: ephemeral
-
+  
+vars:
+  # only used for dbt_utils package to resolve version bug: surrogate_key => generate_surrogate_key
+  surrogate_key_treat_nulls_as_empty_strings: True
