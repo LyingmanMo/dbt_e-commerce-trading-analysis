@@ -31,6 +31,7 @@ sources:
   - name: stripe
     description: A clone of a Postgres application database.
     database: raw
+    schema: stripe
     tables:
       - name: payment
         description: Raw payment data.
