@@ -1,1 +1,0 @@
- select * from analytics.dbt_xliu_dbt_test__audit.accepted_values_stg_jaffle_sho_c16b4b05fb4a935351ad85bc07bf8d13
