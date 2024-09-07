@@ -7,3 +7,5 @@ packages:
     version: 1.3.0
   # - package: fivetran/ad_reporting
   #   version: 1.9.0
+  - package: tnightengale/dbt_meta_testing
+    version: 0.3.6

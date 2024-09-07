@@ -1,12 +1,1 @@
-with orders as (select * from analytics.dbt_xliu.stg_jaffle_shop__orders)
-
-select
-    -- generate customer_id+order_id as primary key
-    md5(cast(coalesce(cast( as TEXT), '_dbt_utils_surrogate_key_null_') || '-' || coalesce(cast( as TEXT), '_dbt_utils_surrogate_key_null_') as TEXT)) as id,
-
-    customer_id,
-    order_date,
-    count(*)
-
-from orders
-group by 1, 2, 3
+ select * from analytics.dbt_xliu_dbt_test__audit.accepted_values_stg_jaffle_sho_c16b4b05fb4a935351ad85bc07bf8d13

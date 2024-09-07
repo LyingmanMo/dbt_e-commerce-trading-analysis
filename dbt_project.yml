@@ -35,10 +35,13 @@ clean-targets: # directories to be removed by `dbt clean`
 
 models:
   e_commerce_trading_analysis:
+    +required_docs: true
     marts:
       # materialize all dimension and fact models as tables
       +materialized: table
     staging: 
+      # All staging models should have unique and not_null
+      +required_tests: {"unique.*|not_null": 2}
       # materialize all transfomed sources as views
       +materialized: view
     legacy:
