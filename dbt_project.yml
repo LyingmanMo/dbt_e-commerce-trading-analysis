@@ -47,9 +47,7 @@ models:
     legacy:
       # materialize all original sql code as tables
       +materialized: table
-    analysis:
-      # materialize all auditing models and temporal tests as ephemeral
-      +materialized: ephemeral
+
   
 vars:
   # only used for dbt_utils package to resolve version bug: surrogate_key => generate_surrogate_key
