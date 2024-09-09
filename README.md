@@ -58,5 +58,5 @@ This project uses a **one trunk** deployment model. No QA branch or environment 
 
 ## Future Enhancements
 
-- Add **Customer Lifetime Value (CLV)** metric.
-- Further **incremental model** optimization.
+- Quering the **semantic layer** with Tableau/Power BI.
+- **Unit Tesging**.
