@@ -59,4 +59,4 @@ This project uses a **one trunk** deployment model. No QA branch or environment 
 ## Future Enhancements
 
 - Quering the **semantic layer** with Tableau/Power BI.
-- **Unit Tesging**.
+- **Unit Testing**.
